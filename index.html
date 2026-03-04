@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cart & Go – Shopping List</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #faf7f2;
+    --card: #ffffff;
+    --ink: #1a1208;
+    --muted: #8a7d6b;
+    --border: #e8e0d4;
+    --accent: #d4570a;
+    --accent-light: #fff0e8;
+    --green: #2d7a4f;
+    --green-light: #e8f5ee;
+    --red: #c0392b;
+    --shadow: 0 2px 16px rgba(26,18,8,0.08);
+    --shadow-lg: 0 8px 40px rgba(26,18,8,0.13);
+    --radius: 16px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 0 0 80px;
+  }
+
+  header {
+    background: var(--ink);
+    color: white;
+    padding: 28px 24px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 24px rgba(26,18,8,0.18);
+  }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 1.9rem; letter-spacing: -0.5px; line-height: 1; }
+  header h1 span { color: var(--accent); }
+  header p { font-size: 0.82rem; color: #a89e90; margin-top: 4px; font-weight: 300; }
+  .header-inner { max-width: 680px; margin: 0 auto; }
+
+  main { max-width: 680px; margin: 0 auto; padding: 24px 16px; }
+
+  .tabs-wrap {
+    display: flex; gap: 8px; overflow-x: auto;
+    padding-bottom: 4px; margin-bottom: 20px; scrollbar-width: none;
+  }
+  .tabs-wrap::-webkit-scrollbar { display: none; }
+
+  .tab {
+    flex-shrink: 0; padding: 8px 18px; border-radius: 40px;
+    border: 2px solid var(--border); background: var(--card);
+    font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500;
+    color: var(--muted); cursor: pointer; transition: all 0.18s;
+    white-space: nowrap; display: flex; align-items: center; gap: 6px;
+  }
+  .tab:hover { border-color: var(--accent); color: var(--accent); }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .tab .remove-store {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(255,255,255,0.3); border: none; color: white;
+    font-size: 12px; line-height: 16px; text-align: center;
+    cursor: pointer; display: none; padding: 0;
+  }
+  .tab.active .remove-store { display: inline-block; }
+  .tab.active .remove-store:hover { background: rgba(255,255,255,0.55); }
+
+  .tab-add {
+    flex-shrink: 0; padding: 8px 16px; border-radius: 40px;
+    border: 2px dashed var(--border); background: transparent;
+    font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500;
+    color: var(--muted); cursor: pointer; transition: all 0.18s; white-space: nowrap;
+  }
+  .tab-add:hover { border-color: var(--accent); color: var(--accent); }
+
+  .card {
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px;
+  }
+
+  .add-row { display: flex; gap: 8px; }
+
+  .input-wrap { position: relative; flex: 1; }
+  .input-wrap input {
+    width: 100%; border: 2px solid var(--border); border-radius: 12px;
+    padding: 12px 16px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem;
+    color: var(--ink); background: var(--bg); outline: none; transition: border 0.18s;
+  }
+  .input-wrap input:focus { border-color: var(--accent); }
+  .input-wrap input::placeholder { color: var(--muted); }
+
+  .suggestions {
+    position: absolute; top: calc(100% + 5px); left: 0; right: 0;
+    background: var(--card); border: 2px solid var(--border); border-radius: 12px;
+    box-shadow: var(--shadow-lg); z-index: 999; max-height: 240px;
+    overflow-y: auto; scrollbar-width: thin;
+  }
+  .suggestions:empty { display: none; }
+  .suggestion-item {
+    padding: 10px 16px; font-size: 0.92rem; cursor: pointer;
+    transition: background 0.1s; display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .suggestion-item:last-child { border-bottom: none; }
+  .suggestion-item:hover, .suggestion-item.highlighted { background: var(--accent-light); color: var(--accent); }
+  .si-new {
+    margin-left: auto; font-size: 0.7rem; background: var(--accent);
+    color: white; padding: 2px 8px; border-radius: 20px; font-weight: 600; white-space: nowrap;
+  }
+
+  .btn {
+    padding: 12px 20px; border-radius: 12px; border: none;
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; transition: all 0.18s;
+  }
+  .btn-accent { background: var(--accent); color: white; }
+  .btn-accent:hover { background: #b84708; transform: translateY(-1px); }
+  .btn-ghost { background: var(--bg); color: var(--muted); border: 2px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--red); color: var(--red); }
+  .btn-green { background: var(--green); color: white; }
+  .btn-green:hover { background: #235f3c; transform: translateY(-1px); }
+
+  .list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .list-header h2 { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; }
+  .list-header .count {
+    font-size: 0.8rem; font-weight: 500; background: var(--accent-light);
+    color: var(--accent); padding: 3px 10px; border-radius: 20px;
+  }
+
+  .item-list { display: flex; flex-direction: column; gap: 6px; }
+  .item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 14px; border-radius: 12px; border: 2px solid var(--border);
+    background: var(--bg); transition: all 0.22s; cursor: pointer; user-select: none;
+  }
+  .item:hover { border-color: #c8bfb0; background: #f3ede4; }
+  .item.checked { background: var(--green-light); border-color: #b8dfc9; opacity: 0.75; }
+  .item-check {
+    width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid var(--border);
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; background: white;
+  }
+  .item.checked .item-check { background: var(--green); border-color: var(--green); }
+  .item.checked .item-check::after { content: '✓'; color: white; font-size: 12px; font-weight: 700; }
+  .item-text { flex: 1; font-size: 0.95rem; font-weight: 400; transition: all 0.22s; }
+  .item.checked .item-text { text-decoration: line-through; color: var(--muted); }
+  .item-delete {
+    width: 28px; height: 28px; border-radius: 8px; background: transparent;
+    border: none; color: #ccc; font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.18s; flex-shrink: 0; line-height: 1;
+  }
+  .item-delete:hover { background: #fde8e8; color: var(--red); }
+
+  .empty-state { text-align: center; padding: 32px 16px; color: var(--muted); }
+  .empty-state .icon { font-size: 2.5rem; margin-bottom: 10px; }
+  .empty-state p { font-size: 0.9rem; }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(26,18,8,0.45);
+    z-index: 200; display: flex; align-items: center; justify-content: center;
+    padding: 24px; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .modal-backdrop.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--card); border-radius: var(--radius); padding: 28px 24px;
+    width: 100%; max-width: 380px; box-shadow: var(--shadow-lg);
+    transform: translateY(16px); transition: transform 0.2s;
+  }
+  .modal-backdrop.open .modal { transform: translateY(0); }
+  .modal h3 { font-family: 'Playfair Display', serif; font-size: 1.3rem; margin-bottom: 16px; }
+  .modal input {
+    width: 100%; border: 2px solid var(--border); border-radius: 12px;
+    padding: 12px 16px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem;
+    color: var(--ink); background: var(--bg); outline: none;
+    margin-bottom: 16px; transition: border 0.18s;
+  }
+  .modal input:focus { border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-actions .btn { flex: 1; padding: 13px; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--ink); color: white; padding: 12px 24px;
+    border-radius: 40px; font-size: 0.88rem; font-weight: 500;
+    z-index: 300; transition: transform 0.3s cubic-bezier(.34,1.56,.64,1); white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .store-none { text-align: center; padding: 48px 24px; color: var(--muted); }
+  .store-none .icon { font-size: 3rem; margin-bottom: 14px; }
+  .store-none h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--ink); margin-bottom: 8px; }
+  .store-none p { font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <h1>Cart <span>&</span> Go</h1>
+    <p>Your smart shopping companion</p>
+  </div>
+</header>
+
+<main>
+  <div class="tabs-wrap" id="tabsWrap"></div>
+  <div id="storeContent"></div>
+</main>
+
+<div class="modal-backdrop" id="storeModal">
+  <div class="modal">
+    <h3>Add a Store</h3>
+    <input type="text" id="storeInput" placeholder="e.g. Costco, Target…" maxlength="40" />
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-accent" onclick="addStore()">Add Store</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── PREPOPULATED GROCERY ITEMS ───────────────────────────────────────────────
+const BASE_GROCERY_ITEMS = [
+  // Produce
+  "Apples","Bananas","Oranges","Lemons","Limes","Grapes","Strawberries","Blueberries",
+  "Raspberries","Watermelon","Cantaloupe","Peaches","Pears","Pineapple","Mango",
+  "Avocado","Tomatoes","Potatoes","Sweet Potatoes","Onions","Red Onion","Garlic",
+  "Shallots","Carrots","Celery","Broccoli","Cauliflower","Spinach","Kale","Lettuce",
+  "Romaine Lettuce","Cabbage","Brussels Sprouts","Green Beans","Asparagus","Zucchini",
+  "Squash","Bell Peppers","Jalapeños","Cucumbers","Mushrooms","Corn","Peas","Edamame",
+  "Ginger","Cilantro","Parsley","Basil","Green Onions","Beets","Radishes","Artichokes",
+  // Dairy & Eggs
+  "Milk","Whole Milk","2% Milk","Almond Milk","Oat Milk","Soy Milk","Eggs","Butter",
+  "Cream Cheese","Sour Cream","Heavy Cream","Half and Half","Cottage Cheese","Yogurt",
+  "Greek Yogurt","Shredded Cheese","Cheddar Cheese","Mozzarella","Parmesan","Swiss Cheese",
+  "Pepper Jack Cheese","American Cheese","Brie","Whipped Cream","Ricotta",
+  // Meat & Seafood
+  "Chicken Breast","Chicken Thighs","Whole Chicken","Ground Beef","Ground Turkey",
+  "Beef Steak","Pork Chops","Bacon","Sausage","Hot Dogs","Deli Turkey","Deli Ham",
+  "Salami","Pepperoni","Salmon","Tilapia","Shrimp","Tuna (canned)","Cod","Crab",
+  "Ground Pork","Lamb","Brisket","Pork Ribs","Rotisserie Chicken","Beef Roast",
+  // Bread & Bakery
+  "Bread","Whole Wheat Bread","Sourdough Bread","Bagels","English Muffins","Flour Tortillas",
+  "Corn Tortillas","Pita Bread","Naan","Dinner Rolls","Hamburger Buns","Hot Dog Buns",
+  "Croissants","Muffins","Donuts","Baguette","Sandwich Thins","Rye Bread","Ciabatta",
+  // Pantry & Canned
+  "Pasta","Spaghetti","Penne","Fettuccine","Rigatoni","Rice","Brown Rice","Jasmine Rice",
+  "Quinoa","Oatmeal","Flour","All-Purpose Flour","Sugar","Brown Sugar","Powdered Sugar",
+  "Olive Oil","Vegetable Oil","Coconut Oil","Canola Oil","Sesame Oil",
+  "White Vinegar","Apple Cider Vinegar","Balsamic Vinegar","Red Wine Vinegar",
+  "Soy Sauce","Fish Sauce","Worcestershire Sauce","Hot Sauce","Sriracha",
+  "Ketchup","Mustard","Dijon Mustard","Mayonnaise","Salad Dressing","Ranch Dressing",
+  "Caesar Dressing","Italian Dressing","Barbecue Sauce","Teriyaki Sauce","Hoisin Sauce",
+  "Salsa","Guacamole","Hummus","Pasta Sauce","Marinara Sauce","Tomato Sauce",
+  "Diced Tomatoes","Crushed Tomatoes","Tomato Paste","Chicken Broth","Beef Broth",
+  "Vegetable Broth","Coconut Milk","Black Beans","Kidney Beans","Chickpeas",
+  "Pinto Beans","Navy Beans","Lentils","Corn (canned)","Green Beans (canned)",
+  "Pumpkin Puree","Breadcrumbs","Panko","Cornstarch","Cornmeal","Baking Powder",
+  "Baking Soda","Yeast","Vanilla Extract","Cocoa Powder","Chocolate Chips",
+  "Honey","Maple Syrup","Agave","Peanut Butter","Almond Butter","Jam","Jelly",
+  "Nutella","Chicken Noodle Soup","Tomato Soup","Cream of Mushroom Soup","Lentil Soup",
+  "Sardines","Anchovies","Capers","Olives","Pickles","Relish","Artichoke Hearts",
+  "Sun-Dried Tomatoes","Roasted Red Peppers",
+  // Frozen
+  "Frozen Pizza","Frozen Vegetables","Frozen Fruit","Ice Cream","Frozen Waffles",
+  "Frozen Burritos","Frozen French Fries","Tater Tots","Chicken Nuggets",
+  "Frozen Fish Sticks","Frozen Edamame","Frozen Peas","Frozen Corn","Frozen Broccoli",
+  "Frozen Berries","Frozen Mango","Frozen Spinach","Frozen Dinner","Frozen Lasagna",
+  "Frozen Shrimp","Frozen Salmon","Ice","Popsicles","Frozen Pie Crust",
+  // Snacks & Cereal
+  "Chips","Tortilla Chips","Potato Chips","Pretzels","Crackers","Popcorn",
+  "Granola Bars","Protein Bars","Trail Mix","Almonds","Cashews","Peanuts",
+  "Walnuts","Pecans","Pistachios","Sunflower Seeds","Pumpkin Seeds",
+  "Cereal","Granola","Rice Cakes","Graham Crackers","Oreos","Cookies",
+  "Candy","Gum","Beef Jerky","Cheese Crackers","Pita Chips","Veggie Straws",
+  "Fruit Snacks","Animal Crackers","Fig Newtons","Ritz Crackers",
+  // Beverages
+  "Water","Sparkling Water","Orange Juice","Apple Juice","Cranberry Juice",
+  "Grape Juice","Coffee","Ground Coffee","Whole Bean Coffee","Coffee Pods",
+  "Tea","Green Tea","Black Tea","Herbal Tea","Iced Tea","Kombucha",
+  "Soda","Diet Soda","Sports Drinks","Energy Drinks","Lemonade",
+  "Coconut Water","Protein Shake","Smoothie","Wine","Beer","Hard Seltzer",
+  // Spices & Condiments
+  "Salt","Black Pepper","Garlic Powder","Onion Powder","Paprika","Smoked Paprika",
+  "Cumin","Chili Powder","Oregano","Dried Basil","Thyme","Rosemary","Bay Leaves",
+  "Cinnamon","Nutmeg","Cloves","Allspice","Red Pepper Flakes","Italian Seasoning",
+  "Taco Seasoning","Everything Bagel Seasoning","Curry Powder","Turmeric",
+  "Cayenne Pepper","Lemon Pepper","Ranch Seasoning","Old Bay","Cajun Seasoning",
+  "Garlic Salt","Celery Salt","Dill","Sage","Marjoram","Cardamom","Garam Masala",
+  // Household
+  "Paper Towels","Toilet Paper","Dish Soap","Laundry Detergent","Fabric Softener",
+  "Trash Bags","Aluminum Foil","Plastic Wrap","Ziplock Bags","Sandwich Bags",
+  "Parchment Paper","Sponges","Cleaning Spray","Bleach","Mop Refill",
+  "Dishwasher Pods","Dryer Sheets","Air Freshener","Candles","Light Bulbs",
+  // Personal Care
+  "Hand Soap","Shampoo","Conditioner","Body Wash","Bar Soap","Lotion",
+  "Toothpaste","Toothbrush","Floss","Mouthwash","Deodorant","Razors",
+  "Shaving Cream","Face Wash","Sunscreen","Lip Balm","Cotton Balls","Q-Tips",
+  // Health & Medicine
+  "Vitamins","Vitamin C","Vitamin D","Multivitamin","Fish Oil","Probiotics",
+  "Ibuprofen","Acetaminophen","Aspirin","Allergy Medicine","Cough Syrup",
+  "Band-Aids","Hydrogen Peroxide","Neosporin","Thermometer","Antacids",
+  // Baby & Pet
+  "Diapers","Baby Wipes","Baby Formula","Baby Food","Baby Shampoo",
+  "Dog Food","Cat Food","Pet Treats","Cat Litter","Pet Shampoo","Dog Leash"
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+function uid() { return '_' + Math.random().toString(36).slice(2, 9); }
+
+const DEFAULT_STORES = ['Walmart', "Sam's Club", 'Dollar Tree', 'King Soopers'];
+
+let stores        = JSON.parse(localStorage.getItem('cg_stores') || 'null') || DEFAULT_STORES.map(n => ({ id: uid(), name: n }));
+let items         = JSON.parse(localStorage.getItem('cg_items')  || '{}');
+let activeStoreId = stores[0]?.id || null;
+let masterList    = loadMasterList();
+
+function loadMasterList() {
+  const custom = JSON.parse(localStorage.getItem('cg_custom') || '[]');
+  const combined = [...BASE_GROCERY_ITEMS];
+  custom.forEach(name => {
+    if (!combined.some(b => b.toLowerCase() === name.toLowerCase())) combined.push(name);
+  });
+  return combined;
+}
+
+function saveCustomItem(name) {
+  if (BASE_GROCERY_ITEMS.some(b => b.toLowerCase() === name.toLowerCase())) return;
+  const custom = JSON.parse(localStorage.getItem('cg_custom') || '[]');
+  if (!custom.some(s => s.toLowerCase() === name.toLowerCase())) {
+    custom.push(name);
+    localStorage.setItem('cg_custom', JSON.stringify(custom));
+    if (!masterList.some(m => m.toLowerCase() === name.toLowerCase())) masterList.push(name);
+  }
+}
+
+function save() {
+  localStorage.setItem('cg_stores', JSON.stringify(stores));
+  localStorage.setItem('cg_items',  JSON.stringify(items));
+}
+
+// ─── AUTOCOMPLETE ─────────────────────────────────────────────────────────────
+let highlightedIndex = -1;
+let currentSuggestions = [];
+
+function onItemInput() {
+  const input = document.getElementById('itemInput');
+  const val   = (input?.value || '').trim().toLowerCase();
+  const box   = document.getElementById('suggestions');
+  if (!box) return;
+  if (!val) { box.innerHTML = ''; highlightedIndex = -1; currentSuggestions = []; return; }
+
+  const startsWith = masterList.filter(i => i.toLowerCase().startsWith(val));
+  const contains   = masterList.filter(i => !i.toLowerCase().startsWith(val) && i.toLowerCase().includes(val));
+  const matches    = [...startsWith, ...contains].slice(0, 8);
+
+  const exactMatch = masterList.some(i => i.toLowerCase() === val);
+  const rawValue   = input.value.trim();
+
+  currentSuggestions = [...matches];
+  if (!exactMatch && rawValue.length > 1) currentSuggestions.push({ isNew: true, label: rawValue });
+
+  highlightedIndex = -1;
+
+  box.innerHTML = currentSuggestions.map((s, i) => {
+    if (s && s.isNew) {
+      return `<div class="suggestion-item" data-idx="${i}"><span>${escHtml(s.label)}</span><span class="si-new">+ Add new</span></div>`;
+    }
+    return `<div class="suggestion-item" data-idx="${i}">${escHtml(s)}</div>`;
+  }).join('');
+
+  box.querySelectorAll('.suggestion-item').forEach(el => {
+    el.addEventListener('mousedown', e => { e.preventDefault(); pickSuggestion(parseInt(el.dataset.idx)); });
+  });
+}
+
+function onItemKeydown(e) {
+  const box = document.getElementById('suggestions');
+  const hasSuggestions = box && currentSuggestions.length > 0;
+
+  if (e.key === 'ArrowDown' && hasSuggestions) {
+    e.preventDefault();
+    highlightedIndex = Math.min(highlightedIndex + 1, currentSuggestions.length - 1);
+    updateHighlight();
+  } else if (e.key === 'ArrowUp' && hasSuggestions) {
+    e.preventDefault();
+    highlightedIndex = Math.max(highlightedIndex - 1, -1);
+    updateHighlight();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (hasSuggestions && highlightedIndex >= 0) pickSuggestion(highlightedIndex);
+    else addItem();
+  } else if (e.key === 'Escape') {
+    closeSuggestions();
+  }
+}
+
+function updateHighlight() {
+  document.querySelectorAll('#suggestions .suggestion-item').forEach((el, i) => {
+    el.classList.toggle('highlighted', i === highlightedIndex);
+  });
+}
+
+function pickSuggestion(idx) {
+  const s = currentSuggestions[idx];
+  if (!s) return;
+  const name = s.isNew ? s.label : s;
+  const input = document.getElementById('itemInput');
+  if (input) input.value = name;
+  closeSuggestions();
+  addItem();
+}
+
+function closeSuggestions() {
+  const box = document.getElementById('suggestions');
+  if (box) box.innerHTML = '';
+  currentSuggestions = [];
+  highlightedIndex = -1;
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.input-wrap')) closeSuggestions();
+});
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function render() { renderTabs(); renderContent(); }
+
+function renderTabs() {
+  const wrap = document.getElementById('tabsWrap');
+  wrap.innerHTML = '';
+
+  stores.forEach(store => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (store.id === activeStoreId ? ' active' : '');
+    btn.onclick = e => { if (!e.target.classList.contains('remove-store')) setActive(store.id); };
+    btn.appendChild(document.createTextNode(store.name + ' '));
+    const x = document.createElement('button');
+    x.className = 'remove-store'; x.textContent = '×'; x.title = 'Remove store';
+    x.onclick = () => removeStore(store.id);
+    btn.appendChild(x);
+    wrap.appendChild(btn);
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'tab-add'; addBtn.textContent = '+ Add Store';
+  addBtn.onclick = openAddStore;
+  wrap.appendChild(addBtn);
+}
+
+function renderContent() {
+  const el = document.getElementById('storeContent');
+  if (!stores.length) {
+    el.innerHTML = `<div class="store-none"><div class="icon">🛒</div><h2>No stores yet</h2><p>Add a store to start your shopping list.</p></div>`;
+    return;
+  }
+  const store = stores.find(s => s.id === activeStoreId);
+  if (!store) return;
+
+  const storeItems = items[activeStoreId] || [];
+  const total   = storeItems.length;
+  const checked = storeItems.filter(i => i.checked).length;
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="add-row">
+        <div class="input-wrap">
+          <input type="text" id="itemInput" placeholder="Search or type an item…"
+            maxlength="80" autocomplete="off"
+            oninput="onItemInput()" onkeydown="onItemKeydown(event)" />
+          <div class="suggestions" id="suggestions"></div>
+        </div>
+        <button class="btn btn-accent" onclick="addItem()">Add</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="list-header">
+        <h2>${store.name}</h2>
+        ${total ? `<span class="count">${checked}/${total} done</span>` : ''}
+      </div>
+      <div class="item-list">${renderItems(storeItems)}</div>
+      ${!total ? `<div class="empty-state"><div class="icon">📝</div><p>Your list is empty — search or type an item above!</p></div>` : ''}
+    </div>
+
+    ${checked > 0 ? `<div class="card"><div class="actions">
+      <button class="btn btn-green" onclick="clearPurchased()">🧹 Clear purchased (${checked})</button>
+      <button class="btn btn-ghost" onclick="clearAll()">Clear all</button>
+    </div></div>` : ''}
+  `;
+
+  document.getElementById('itemInput')?.focus();
+}
+
+function renderItems(storeItems) {
+  return storeItems.map(item => `
+    <div class="item ${item.checked ? 'checked' : ''}" onclick="toggleItem('${item.id}')">
+      <div class="item-check"></div>
+      <span class="item-text">${escHtml(item.name)}</span>
+      <button class="item-delete" onclick="event.stopPropagation();deleteItem('${item.id}')" title="Remove">×</button>
+    </div>
+  `).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── STORES ───────────────────────────────────────────────────────────────────
+function setActive(id) { activeStoreId = id; render(); }
+
+function openAddStore() {
+  document.getElementById('storeModal').classList.add('open');
+  document.getElementById('storeInput').value = '';
+  document.getElementById('storeInput').onkeydown = e => { if (e.key === 'Enter') addStore(); };
+  setTimeout(() => document.getElementById('storeInput').focus(), 100);
+}
+
+function closeModal() { document.getElementById('storeModal').classList.remove('open'); }
+
+function addStore() {
+  const name = document.getElementById('storeInput').value.trim();
+  if (!name) return;
+  if (stores.find(s => s.name.toLowerCase() === name.toLowerCase())) { showToast('Store already exists!'); return; }
+  const store = { id: uid(), name };
+  stores.push(store);
+  activeStoreId = store.id;
+  save(); closeModal(); render();
+  showToast(`${name} added!`);
+}
+
+function removeStore(id) {
+  const store = stores.find(s => s.id === id);
+  if (!confirm(`Remove "${store?.name}" and its list?`)) return;
+  stores = stores.filter(s => s.id !== id);
+  delete items[id];
+  if (activeStoreId === id) activeStoreId = stores[0]?.id || null;
+  save(); render();
+  showToast('Store removed.');
+}
+
+// ─── ITEMS ────────────────────────────────────────────────────────────────────
+function addItem() {
+  const input = document.getElementById('itemInput');
+  const name  = input?.value.trim();
+  if (!name || !activeStoreId) return;
+
+  const storeItems = items[activeStoreId] || [];
+  if (storeItems.some(i => i.name.toLowerCase() === name.toLowerCase())) {
+    showToast(`"${name}" is already on the list!`);
+    input.value = ''; closeSuggestions(); return;
+  }
+
+  if (!items[activeStoreId]) items[activeStoreId] = [];
+  items[activeStoreId].push({ id: uid(), name, checked: false });
+  saveCustomItem(name);
+  save();
+  input.value = ''; closeSuggestions();
+  renderContent();
+  document.getElementById('itemInput')?.focus();
+}
+
+function toggleItem(id) {
+  const item = (items[activeStoreId] || []).find(i => i.id === id);
+  if (item) { item.checked = !item.checked; save(); renderContent(); }
+}
+
+function deleteItem(id) {
+  items[activeStoreId] = (items[activeStoreId] || []).filter(i => i.id !== id);
+  save(); renderContent();
+}
+
+function clearPurchased() {
+  const before = (items[activeStoreId] || []).length;
+  items[activeStoreId] = (items[activeStoreId] || []).filter(i => !i.checked);
+  const n = before - items[activeStoreId].length;
+  save(); renderContent();
+  showToast(`${n} purchased item${n !== 1 ? 's' : ''} cleared!`);
+}
+
+function clearAll() {
+  if (!confirm('Clear all items from this list?')) return;
+  items[activeStoreId] = [];
+  save(); renderContent();
+  showToast('List cleared.');
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+document.getElementById('storeModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+
+render();
+</script>
+</body>
+</html>
